@@ -53,6 +53,27 @@ module routes {
   kube_sub       = module.networks.kube-sub.id
 }
 
+module aks {
+  source             = "./aks"
+  resource_group     = local.rg
+  location           = local.region
+  kube_sub           = module.networks.kube-sub.id
+  k8s_ver            = var.k8s_ver
+  dns_prefix         = var.dns_prefix
+  vm_size            = var.vm_size
+  min_node_count     = var.min_node_count
+  max_node_count     = var.max_node_count
+  node_count         = var.node_count
+  cluster_admin_user = var.cluster_admin_user
+  key_data           = file("~/.ssh/ted.pub")
+  docker_bridge_cidr = var.docker_bridge_cidr
+  cni_dns_svc_ip     = var.cni_dns_svc_ip
+  cni_svc_cidr       = var.cni_svc_cidr
+  acr                = module.registry.id
+  #depends            = module.routes
+  depends_on         = [module.routes]
+}
+
 resource azurerm_kubernetes_cluster private-cluster {
   name                    = "k8s"
   location                = local.region
@@ -74,6 +95,7 @@ resource azurerm_kubernetes_cluster private-cluster {
 
   role_based_access_control {
     enabled        = true
+    azure_active_directory {}
   }
 
   addon_profile {
@@ -114,6 +136,26 @@ resource azurerm_role_assignment acr-pull {
   role_definition_name = "AcrPull"
   scope                = azurerm_container_registry.private-acr.id
   principal_id         = azurerm_kubernetes_cluster.private-cluster.identity[0].principal_id
+}
+
+output kube-admin {
+  value = azurerm_kubernetes_cluster.private-cluster.kube_admin_config_raw
+}
+
+output kubeconfig {
+  value = azurerm_kubernetes_cluster.private-cluster.kube_config_raw
+}
+
+resource local_file kubeconfig {
+  #sensitive_content =
+  content  = azurerm_kubernetes_cluster.private-cluster.kube_config_raw
+  filename = "${path.root}/conf/kubeconfig"
+}
+
+resource local_file kubeadmin {
+  #sensitive_content =
+  content  = azurerm_kubernetes_cluster.private-cluster.kube_admin_config_raw
+  filename = "${path.root}/conf/kubeadmin"
 }
 
 resource azurerm_container_registry private-acr {
