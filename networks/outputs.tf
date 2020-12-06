@@ -5,3 +5,7 @@ output hub-subs {
 output kube-sub {
   value = azurerm_subnet.kube-sub
 }
+
+output spoke-net {
+  value = azurerm_virtual_network.spoke
+}

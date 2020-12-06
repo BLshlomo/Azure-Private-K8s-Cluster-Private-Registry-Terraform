@@ -53,6 +53,15 @@ module routes {
   kube_sub       = module.networks.kube-sub.id
 }
 
+module registry {
+  source         = "./registry"
+  resource_group = local.rg
+  location       = local.region
+  kube_sub       = module.networks.kube-sub.id
+  spoke_net      = module.networks.spoke-net.id
+  acr_name       = "abcdefgadevel"
+}
+
 #module aks {
 #  source             = "./aks"
 #  resource_group     = local.rg
