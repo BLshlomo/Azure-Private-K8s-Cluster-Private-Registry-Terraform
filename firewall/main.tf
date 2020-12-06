@@ -1,7 +1,3 @@
-variable location {}
-variable resource_group {}
-variable subnet_id {}
-
 resource azurerm_public_ip pip {
   name                = "public-ip"
   resource_group_name = var.resource_group

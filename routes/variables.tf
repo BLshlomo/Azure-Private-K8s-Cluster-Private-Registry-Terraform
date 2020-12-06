@@ -1,15 +1,15 @@
 variable location {
-  type = "String"
+  type = string
 }
 
 variable resource_group {
-  type = "String"
+  type = string
 }
 
 variable ip_getway {
-  type = "String"
+  type = string
 }
 
 variable kube_sub {
-  type = "String"
+  type = string
 }
