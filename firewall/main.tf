@@ -42,6 +42,6 @@ resource azurerm_firewall_network_rule_collection egress {
   }
 }
 
-output fw_private_ip {
+output fw-private-ip {
   value = azurerm_firewall.fw.ip_configuration[0].private_ip_address
 }

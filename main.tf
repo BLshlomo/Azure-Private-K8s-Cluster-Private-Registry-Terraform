@@ -45,27 +45,12 @@ module firewall {
   subnet_id      = module.networks.hub-subs[index(module.networks.hub-subs[*].name, "AzureFirewallSubnet")].id
 }
 
-resource azurerm_route_table spoke-rt {
-  name                = "spoke-rt"
-  location            = local.region
-  resource_group_name = local.rg
-
-  route {
-    name                   = "egress"
-    address_prefix         = "0.0.0.0/0"
-    next_hop_type          = "VirtualAppliance"
-    next_hop_in_ip_address = module.firewall.fw_private_ip
-  }
-}
-
-resource azurerm_subnet_route_table_association spoke-kube {
-  subnet_id      = azurerm_subnet.kube-sub.id
-  route_table_id = azurerm_route_table.spoke-rt.id
-}
-
-resource azurerm_subnet_route_table_association spoke-acr {
-  subnet_id      = azurerm_subnet.acr-sub.id
-  route_table_id = azurerm_route_table.spoke-rt.id
+module routes {
+  source         = "./routes"
+  resource_group = local.rg
+  location       = local.region
+  ip_getway      = module.firewall.fw-private-ip
+  kube_sub       = module.networks.kube-sub.id
 }
 
 resource azurerm_kubernetes_cluster private-cluster {
