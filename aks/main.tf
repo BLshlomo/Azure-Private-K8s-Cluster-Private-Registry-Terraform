@@ -7,19 +7,21 @@ resource azurerm_kubernetes_cluster private-cluster {
   private_cluster_enabled = true
 
   default_node_pool {
-    name           = "default"
-    vm_size        = var.vm_size
-    vnet_subnet_id = var.kube-sub
+    name                = "default"
+    vm_size             = var.vm_size
+    vnet_subnet_id      = var.kube_sub
     enable_auto_scaling = true
-    type           = "VirtualMachineScaleSets"
-    min_count      = var.min_node_count
-    max_count      = var.max_node_count
-    node_count     = var.node_count
+    type                = "VirtualMachineScaleSets"
+    min_count           = var.min_node_count
+    max_count           = var.max_node_count
+    node_count          = var.node_count
   }
 
   role_based_access_control {
     enabled        = true
-    azure_active_directory {}
+    azure_active_directory {
+      managed = true
+    }
   }
 
   addon_profile {
@@ -31,7 +33,7 @@ resource azurerm_kubernetes_cluster private-cluster {
   linux_profile {
     admin_username = var.cluster_admin_user
     ssh_key {
-      key_data     = var.key_data
+      key_data     = var.pub_key
     }
   }
 
@@ -47,12 +49,12 @@ resource azurerm_kubernetes_cluster private-cluster {
     service_cidr       = var.cni_svc_cidr
   }
 
-  #depends_on = [var.depends]
+  depends_on = [var.depends]
 }
 
 resource azurerm_role_assignment netcontributor {
   role_definition_name = "Network Contributor"
-  scope                = var.kube-sub
+  scope                = var.kube_sub
   principal_id         = azurerm_kubernetes_cluster.private-cluster.identity[0].principal_id
 }
 
