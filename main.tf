@@ -1,4 +1,4 @@
-
+# Initialize backend on GCP.
 terraform {
   backend gcs {
     bucket = "devel-tfstate"
@@ -6,65 +6,65 @@ terraform {
   }
 }
 
-# Configure the Azure Provider
+# Configure the Azure provider.
 provider azurerm {
   # whilst the `version` attribute is optional, we recommend pinning to a given version of the Provider
   version = "~> 2.38"
   features {}
 }
 
+# Set aliases.
 locals {
   version = "~> 2.0"
   region      = "UK South"
   rg          = azurerm_resource_group.rg.name
-  #hub_subnets = tolist(azurerm_virtual_network.hub.subnet)
-  #spoke_subnet = tolist(azurerm_virtual_network.spoke.subnet)[0].id
 }
 
+# Create Azure resource group.
 resource azurerm_resource_group rg {
   name     = "rg"
   location = local.region
 }
 
-#output test {
-#value = local.hub_subnets[0]
-#value = local.hub_subnets[index(local.hub_subnets[*].name, "AzureFirewallSubnet")].name
-#value = tolist(azurerm_virtual_network.hub.subnet)[*].name
-#value = tolist(azurerm_virtual_network.spoke.subnet)[0].id
-#}
-
+# Create 2 virtual networks, one private (spoke) and one with public access (hub), used as as a getway and nat egress (firewall).
+# The networks are connected by peering.
 module networks {
-  source         = "./networks"
+  source         = "./modules/networks"
   resource_group = local.rg
   location       = local.region
 }
 
+# Firewall used as a nat getway, all egress allowed, no ingress.
 module firewall {
-  source         = "./firewall"
+  source         = "./modules/firewall"
   resource_group = local.rg
   location       = local.region
   subnet_id      = module.networks.hub-subs[index(module.networks.hub-subs[*].name, "AzureFirewallSubnet")].id
 }
 
+# Route all egress trafiic to the firewall.
 module routes {
-  source         = "./routes"
+  source         = "./modules/routes"
   resource_group = local.rg
   location       = local.region
   ip_getway      = module.firewall.fw-private-ip
   kube_sub       = module.networks.kube-sub.id
 }
 
+# Set up a private image registry on Azure, no public access is allowed.
+# Create endpoint on the private (Kubernetes) subnet, allow access only through that ep.
 module registry {
-  source         = "./registry"
+  source         = "./modules/registry"
   resource_group = local.rg
   location       = local.region
   kube_sub       = module.networks.kube-sub.id
   spoke_net      = module.networks.spoke-net.id
-  acr_name       = "abcdefgadevel"
+  acr_name       = "shlomo"
 }
 
+# Create private Kubernetes cluster on a private subnet, kube, contains the image registry endpoint, and linked to the firewall (nat) on another vnet.
 module aks {
-  source             = "./aks"
+  source             = "./modules/aks"
   resource_group     = local.rg
   location           = local.region
   kube_sub           = module.networks.kube-sub.id
@@ -81,11 +81,12 @@ module aks {
   cni_svc_cidr       = var.cni_svc_cidr
   acr                = module.registry.acr.id
   depends            = module.routes
-  #depends_on         = [module.routes]
 }
 
+# Create an instance used on a public subnet, connect the subnet to the cluster private dns zone, used for the kubectl utility to manage kubernetes.
+# Automatically upload the kubeadmin kubeconfig credentials to the instance once the cluster provides them.
 module bastion {
-  source         = "./bastion"
+  source         = "./modules/bastion"
   resource_group = local.rg
   location       = local.region
   username       = "localadmin"
@@ -96,27 +97,4 @@ module bastion {
   aks_dns_name   = join(".", slice(split(".", module.aks.cluster.private_fqdn), 1, length(split(".", module.aks.cluster.private_fqdn))))
   aks_dns_rg     = module.aks.cluster.node_resource_group
   kubeadmin      = module.aks.cluster.kube_admin_config_raw
-}
-
-#module vm {
-#  source         = "./instance"
-#  resource_group = local.rg
-#  location       = local.region
-#  username       = "localadmin"
-#  key            = file("~/.ssh/ted.pub")
-#  subnet_id      = azurerm_subnet.kube-sub.id
-#  sg             = module.bastion.sg
-#}
-#
-
-output split {
-  value = split(".", module.aks.cluster.private_fqdn)
-}
-
-output slice {
-  value = slice(split(".", module.aks.cluster.private_fqdn), 1, length(split(".", module.aks.cluster.private_fqdn)))
-}
-
-output join {
-  value = join(".", slice(split(".", module.aks.cluster.private_fqdn), 1, length(split(".", module.aks.cluster.private_fqdn))))
 }

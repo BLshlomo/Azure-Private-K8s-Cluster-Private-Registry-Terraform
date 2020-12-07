@@ -63,15 +63,3 @@ resource azurerm_role_assignment acr-pull {
   scope                = var.acr
   principal_id         = azurerm_kubernetes_cluster.private-cluster.identity[0].principal_id
 }
-
-resource local_file kubeconfig {
-  #sensitive_content =
-  content  = azurerm_kubernetes_cluster.private-cluster.kube_config_raw
-  filename = "${path.root}/conf/kubeconfig"
-}
-
-resource local_file kubeadmin {
-  #sensitive_content =
-  content  = azurerm_kubernetes_cluster.private-cluster.kube_admin_config_raw
-  filename = "${path.root}/conf/kubeadmin"
-}

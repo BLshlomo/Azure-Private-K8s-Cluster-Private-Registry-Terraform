@@ -1,3 +1,9 @@
 .terraform/
 *.swp
 conf/
+temp
+modules/instance/
+*.odt
+*.txt
+*.odt#
+*.swp

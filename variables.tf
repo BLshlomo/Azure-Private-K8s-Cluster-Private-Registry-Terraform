@@ -11,24 +11,20 @@ variable vm_size {
 }
 
 variable node_count {
-  default = "1"
+  default = "3"
 }
 
 variable min_node_count {
-  default = "1"
+  default = "3"
 }
 
 variable max_node_count {
-  default = "3"
+  default = "5"
 }
 
 variable cluster_admin_user {
   default = "k8sadmin"
 }
-
-#variable pub_key {
-#  default     = file("~/.ssh/ted.pub")
-#}
 
 variable docker_bridge_cidr {
   default = "172.17.0.1/16"

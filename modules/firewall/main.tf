@@ -27,17 +27,9 @@ resource azurerm_firewall_network_rule_collection egress {
 
   rule {
     name = "allow-all-egress"
-
     source_addresses = ["*"]
-
     destination_ports = ["*"]
-
     destination_addresses = ["*"]
-
     protocols = ["Any"]
   }
-}
-
-output fw-private-ip {
-  value = azurerm_firewall.fw.ip_configuration[0].private_ip_address
 }

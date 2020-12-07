@@ -1,3 +1,11 @@
+provider null {
+  version = "~> 3.0"
+}
+
+provider template {
+  version = "~> 2.2"
+}
+
 resource azurerm_public_ip ip {
   name                = "bastion-ip"
   location            = var.location

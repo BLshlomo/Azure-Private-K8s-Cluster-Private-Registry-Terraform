@@ -1,5 +1,5 @@
 output hub-subs {
-  value = tolist(azurerm_virtual_network.hub.subnet) 
+  value = tolist(azurerm_virtual_network.hub.subnet)
 }
 
 output kube-sub {
