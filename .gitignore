@@ -6,4 +6,5 @@ modules/instance/
 *.odt
 *.txt
 *.odt#
-*.swp
+gke
+*.bak
