@@ -20,21 +20,23 @@ variable username {
 }
 
 variable vnet_id {
-  description = "ID of the VNET where jumpbox VM will be installed"
+  description = "Bastion vnet id"
   type        = string
 }
 
 variable subnet_id {
-  description = "ID of subnet where jumpbox VM will be installed"
+  description = "Bastion subnet id"
   type        = string
 }
 
-#variable dns_zone_name {
-#  description = "Private DNS Zone name to link jumpbox's vnet to"
-#  type        = string
-#}
-#
-#variable dns_zone_resource_group {
-#  description = "Private DNS Zone resource group"
-#  type        = string
-#}
+variable aks_dns_name {
+  description = "AKS DNS Zone name to link bastion vnet to"
+  type        = string
+}
+
+variable aks_dns_rg {
+  description = "AKS DNS Zone rg"
+  type        = string
+}
+
+variable kubeadmin {}

@@ -64,14 +64,6 @@ resource azurerm_role_assignment acr-pull {
   principal_id         = azurerm_kubernetes_cluster.private-cluster.identity[0].principal_id
 }
 
-output kube-admin {
-  value = azurerm_kubernetes_cluster.private-cluster.kube_admin_config_raw
-}
-
-output kubeconfig {
-  value = azurerm_kubernetes_cluster.private-cluster.kube_config_raw
-}
-
 resource local_file kubeconfig {
   #sensitive_content =
   content  = azurerm_kubernetes_cluster.private-cluster.kube_config_raw

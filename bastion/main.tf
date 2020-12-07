@@ -36,10 +36,10 @@ resource azurerm_network_security_group bastion_sg {
 }
 
 resource azurerm_network_interface bastion_nic {
-  name                = "bastion-nic"
-  location            = var.location
-  resource_group_name = var.resource_group
-
+  name                  = "bastion-nic"
+  location              = var.location
+  resource_group_name   = var.resource_group
+  enable_ip_forwarding  = true
   ip_configuration {
     name                          = "ip-conf"
     subnet_id                     = var.subnet_id
@@ -61,6 +61,7 @@ resource azurerm_linux_virtual_machine bastion {
   size                            = "Standard_DS1_v2"
   disable_password_authentication = true
   admin_username                  = var.username
+  custom_data    = base64encode(data.template_file.linux-vm-cloud-init.rendered)
 
   admin_ssh_key {
     username   = var.username
@@ -79,33 +80,49 @@ resource azurerm_linux_virtual_machine bastion {
     sku       = "18.04-LTS"
     version   = "latest"
   }
+}
 
-  provisioner "remote-exec" {
-    connection {
-      host     = self.public_ip_address
-      type     = "ssh"
-      user     = var.username
-      private_key = var.priv_key
-    }
+data template_file linux-vm-cloud-init {
+  template = <<EOT
+#!/bin/bash
+mkdir -p /home/${var.username}/.kube
+chown ${var.username}: /home/${var.username}/.kube
+echo "init script" >> /home/localadmin/myINIT.txt
+apt-get update && apt-get install -y apt-transport-https gnupg2
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+echo 'deb https://apt.kubernetes.io/ kubernetes-xenial main' | tee -a /etc/apt/sources.list.d/kubernetes.list
+apt-get update
+apt-get install -y kubectl
+curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+EOT
+}
 
-    inline = [
-      "sudo apt-get update && sudo apt-get install -y apt-transport-https gnupg2",
-      "curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -",
-      "echo 'deb https://apt.kubernetes.io/ kubernetes-xenial main' | sudo tee -a /etc/apt/sources.list.d/kubernetes.list",
-      "sudo apt-get update",
-      "sudo apt-get install -y kubectl",
-      "curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash"
-    ]
+resource null_resource kubeadmin {
+  triggers = {
+   #kubeadmin = file("${path.root}/conf/kubeadmin")
+    kubeadmin = var.kubeadmin
   }
+
+  provisioner "file" {
+    content     = self.triggers.kubeadmin
+    destination = "~/.kube/config/"
+
+    connection {
+      host        = azurerm_linux_virtual_machine.bastion.public_ip_address
+      type        = "ssh"
+      user        = var.username
+      private_key = var.priv_key
+      timeout     = "10m"
+    }
+  }
+
+  depends_on = [azurerm_linux_virtual_machine.bastion]
 }
 
-#resource azurerm_private_dns_zone_virtual_network_link hub-dns-link {
-#  name                  = "hub-dns-link"
-#  resource_group_name   = var.dns_zone_resource_group
-#  private_dns_zone_name = var.dns_zone_name
-#  virtual_network_id    = var.vnet_id
-#}
-
-output sg {
-  value = azurerm_network_security_group.bastion_sg.id
+resource azurerm_private_dns_zone_virtual_network_link hub2aks-dns-link {
+  name                  = "hub2aks-dns-link"
+  resource_group_name   = var.aks_dns_rg
+  private_dns_zone_name = var.aks_dns_name
+  virtual_network_id    = var.vnet_id
 }
+

@@ -9,11 +9,12 @@ terraform {
 # Configure the Azure Provider
 provider azurerm {
   # whilst the `version` attribute is optional, we recommend pinning to a given version of the Provider
-  version = "=2.38.0"
+  version = "~> 2.38"
   features {}
 }
 
 locals {
+  version = "~> 2.0"
   region      = "UK South"
   rg          = azurerm_resource_group.rg.name
   #hub_subnets = tolist(azurerm_virtual_network.hub.subnet)
@@ -83,17 +84,20 @@ module aks {
   #depends_on         = [module.routes]
 }
 
-#module bastion {
-#  source         = "./bastion"
-#  resource_group = local.rg
-#  location       = local.region
-#  username       = "localadmin"
-#  pub_key        = file("~/.ssh/ted.pub")
-#  priv_key       = file("~/.ssh/ted")
-#  subnet_id      = local.hub_subnets[index(local.hub_subnets[*].name, "bastion")].id
-#  vnet_id        = azurerm_virtual_network.hub.id
-#}
-#
+module bastion {
+  source         = "./bastion"
+  resource_group = local.rg
+  location       = local.region
+  username       = "localadmin"
+  pub_key        = file("~/.ssh/ted.pub")
+  priv_key       = file("~/.ssh/ted")
+  subnet_id      = module.networks.hub-subs[index(module.networks.hub-subs[*].name, "bastion")].id
+  vnet_id        = module.networks.hub-net.id
+  aks_dns_name   = join(".", slice(split(".", module.aks.cluster.private_fqdn), 1, length(split(".", module.aks.cluster.private_fqdn))))
+  aks_dns_rg     = module.aks.cluster.node_resource_group
+  kubeadmin      = module.aks.cluster.kube_admin_config_raw
+}
+
 #module vm {
 #  source         = "./instance"
 #  resource_group = local.rg
@@ -104,3 +108,15 @@ module aks {
 #  sg             = module.bastion.sg
 #}
 #
+
+output split {
+  value = split(".", module.aks.cluster.private_fqdn)
+}
+
+output slice {
+  value = slice(split(".", module.aks.cluster.private_fqdn), 1, length(split(".", module.aks.cluster.private_fqdn)))
+}
+
+output join {
+  value = join(".", slice(split(".", module.aks.cluster.private_fqdn), 1, length(split(".", module.aks.cluster.private_fqdn))))
+}
